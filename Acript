@@ -1,0 +1,208 @@
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- 1. AUTH SYSTEM SETUP
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "Delta_Ultimate_V2"
+screenGui.ResetOnSpawn = false
+screenGui.DisplayOrder = 9999
+
+local CORRECT_KEY = "bigboy2026"
+
+local keyFrame = Instance.new("Frame", screenGui)
+keyFrame.Size = UDim2.new(0, 300, 0, 200)
+keyFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+keyFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Instance.new("UICorner", keyFrame)
+
+local keyTitle = Instance.new("TextLabel", keyFrame)
+keyTitle.Size = UDim2.new(1, 0, 0, 50)
+keyTitle.Text = "DELTA AUTH"
+keyTitle.TextColor3 = Color3.new(1, 1, 1)
+keyTitle.Font = Enum.Font.GothamBold
+keyTitle.BackgroundTransparency = 1
+
+local keyInput = Instance.new("TextBox", keyFrame)
+keyInput.Size = UDim2.new(0, 260, 0, 45)
+keyInput.Position = UDim2.new(0.5, -130, 0, 65)
+keyInput.PlaceholderText = "Enter Key..."
+keyInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+keyInput.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", keyInput)
+
+local submitBtn = Instance.new("TextButton", keyFrame)
+submitBtn.Size = UDim2.new(0, 260, 0, 45)
+submitBtn.Position = UDim2.new(0.5, -130, 0, 125)
+submitBtn.Text = "ACTIVATE"
+submitBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+submitBtn.TextColor3 = Color3.new(1, 1, 1)
+submitBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", submitBtn)
+
+-- 2. MAIN HUB LOADER
+local function LoadHub()
+    local mainFrame = Instance.new("Frame", screenGui)
+    mainFrame.Size = UDim2.new(0, 320, 0, 420)
+    mainFrame.Position = UDim2.new(0.5, -160, 0.5, -210)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    Instance.new("UICorner", mainFrame)
+
+    local titleBar = Instance.new("TextButton", mainFrame)
+    titleBar.Size = UDim2.new(1, 0, 0, 45)
+    titleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+    titleBar.Text = "DELTA MOBILE ULTIMATE"
+    titleBar.TextColor3 = Color3.new(1, 1, 1)
+    titleBar.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", titleBar)
+
+    -- Dragging Logic
+    local dragging, dragStart, startPos
+    titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true dragStart = input.Position startPos = mainFrame.Position
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    UIS.InputEnded:Connect(function(input) dragging = false end)
+
+    local function createBtn(text, pos)
+        local btn = Instance.new("TextButton", mainFrame)
+        btn.Size = UDim2.new(0, 280, 0, 45)
+        btn.Position = pos
+        btn.Text = text
+        btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.Font = Enum.Font.GothamBold
+        Instance.new("UICorner", btn)
+        return btn
+    end
+
+    -- SPEED
+    local speedBox = Instance.new("TextBox", mainFrame)
+    speedBox.Size = UDim2.new(0, 280, 0, 45)
+    speedBox.Position = UDim2.new(0, 20, 0, 60)
+    speedBox.PlaceholderText = "Speed (Default 16)..."
+    speedBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    speedBox.TextColor3 = Color3.new(1, 1, 1)
+    Instance.new("UICorner", speedBox)
+    speedBox.FocusLost:Connect(function()
+        if player.Character then player.Character.Humanoid.WalkSpeed = tonumber(speedBox.Text) or 16 end
+    end)
+
+    -- CONTROLLED FLIGHT
+    local flying = false
+    local flyBtn = createBtn("Flight: OFF", UDim2.new(0, 20, 0, 115))
+    flyBtn.MouseButton1Click:Connect(function()
+        flying = not flying
+        flyBtn.Text = flying and "Flight: ON" or "Flight: OFF"
+        flyBtn.BackgroundColor3 = flying and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(35, 35, 35)
+        
+        local char = player.Character
+        if not char then return end
+        local root = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChild("Humanoid")
+        
+        if flying and root and hum then
+            local bv = Instance.new("BodyVelocity", root)
+            local bg = Instance.new("BodyGyro", root)
+            bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+            bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+            bg.P = 3000
+            
+            task.spawn(function()
+                while flying and char.Parent do
+                    RunService.RenderStepped:Wait()
+                    bg.CFrame = camera.CFrame
+                    if hum.MoveDirection.Magnitude > 0 then
+                        bv.Velocity = hum.MoveDirection * 100
+                    else
+                        bv.Velocity = Vector3.new(0, 0.1, 0) -- Hover
+                    end
+                end
+                bv:Destroy()
+                bg:Destroy()
+            end)
+        end
+    end)
+
+    -- NOCLIP
+    local noclip = false
+    local noclipBtn = createBtn("Noclip: OFF", UDim2.new(0, 20, 0, 170))
+    noclipBtn.MouseButton1Click:Connect(function()
+        noclip = not noclip
+        noclipBtn.Text = noclip and "Noclip: ON" or "Noclip: OFF"
+        noclipBtn.BackgroundColor3 = noclip and Color3.fromRGB(150, 0, 255) or Color3.fromRGB(35, 35, 35)
+    end)
+    RunService.Stepped:Connect(function()
+        if noclip and player.Character then
+            for _, v in pairs(player.Character:GetDescendants()) do 
+                if v:IsA("BasePart") then v.CanCollide = false end 
+            end
+        end
+    end)
+
+    -- AIMBOT
+    local aimActive = false
+    local aimBtn = createBtn("Mobile Aim: OFF", UDim2.new(0, 20, 0, 225))
+    aimBtn.MouseButton1Click:Connect(function()
+        aimActive = not aimActive
+        aimBtn.Text = aimActive and "Mobile Aim: ON" or "Mobile Aim: OFF"
+        aimBtn.BackgroundColor3 = aimActive and Color3.fromRGB(255, 100, 0) or Color3.fromRGB(35, 35, 35)
+    end)
+    RunService.RenderStepped:Connect(function()
+        if aimActive then
+            local target = nil
+            local shortestDist = 400
+            for _, v in pairs(game.Players:GetPlayers()) do
+                if v ~= player and v.Character and v.Character:FindFirstChild("Head") then
+                    local pos, onScreen = camera:WorldToViewportPoint(v.Character.Head.Position)
+                    if onScreen then
+                        local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)).Magnitude
+                        if dist < shortestDist then shortestDist = dist target = v.Character.Head end
+                    end
+                end
+            end
+            if target then camera.CFrame = CFrame.new(camera.CFrame.Position, target.Position) end
+        end
+    end)
+
+    -- TOGGLE CONTROLS
+    local openBtn = createBtn("OPEN", UDim2.new(0, 10, 0, 10))
+    openBtn.Parent = screenGui 
+    openBtn.Size = UDim2.new(0, 80, 0, 35) 
+    openBtn.Visible = false
+
+    local function toggle()
+        mainFrame.Visible = not mainFrame.Visible
+        openBtn.Visible = not mainFrame.Visible
+    end
+
+    local closeBtn = Instance.new("TextButton", titleBar)
+    closeBtn.Size = UDim2.new(0, 30, 0, 30) 
+    closeBtn.Position = UDim2.new(1, -35, 0, 7)
+    closeBtn.Text = "X" 
+    closeBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    closeBtn.MouseButton1Click:Connect(toggle)
+    openBtn.MouseButton1Click:Connect(toggle)
+end
+
+-- 3. FINAL KEY CHECK LOGIC
+submitBtn.MouseButton1Click:Connect(function()
+    if keyInput.Text == CORRECT_KEY then
+        keyFrame:Destroy()
+        LoadHub()
+    else
+        submitBtn.Text = "WRONG KEY"
+        submitBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        task.wait(1)
+        submitBtn.Text = "ACTIVATE"
+        submitBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    end
+end)
